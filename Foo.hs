@@ -1,0 +1,1 @@
+dia = (square 2 # fc red ||| circle 1 # fc blue) # bg yellow
