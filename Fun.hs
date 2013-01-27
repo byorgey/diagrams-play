@@ -7,7 +7,7 @@ c = circle 1 # fc red
 
 dia = vcat (replicate 3 c)
 
-p = fromOffsets [(1,2), (-3,4), (0,3)]
+p = fromOffsets [(1 & 2), (-3 & 4), (0 & 3)]
 
 q = mconcat . take 10 . iterate (rotateBy (1/10)) $ p
 
