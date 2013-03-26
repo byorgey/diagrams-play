@@ -35,4 +35,12 @@ arcArrow p1 p2 ht offs = aDia
         # rotateBy (direction v)
         # moveTo p1
 
-main = defaultMain (square 2 <> square 2.4 <> arcArrow (1&1) (2&2) 0 0.2)
+aa h offs = arcArrow origin (1 & 0) h offs <> p <> p # translateX 1
+  where p = circle 0.02 # fc black
+
+dia =
+    vcat' with { catMethod = Distrib, sep = 1 }
+  . map (hcat' with { catMethod = Distrib, sep = 2 })
+  $ [[aa h offs | offs <- [0,0.05 .. 0.4]] | h <- [0.2, 0.15 .. -0.2]]
+
+main = defaultMain dia
