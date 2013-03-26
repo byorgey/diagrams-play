@@ -4,10 +4,11 @@ cabal-dev
 *.hi
 *.chi
 *.chs.h
+*.errors
+*.pdf
 .virthualenv
 *~
-dist_*
 .hsenv_*
+dist_*
+history
 TAGS
-*.pdf
-*.errors
