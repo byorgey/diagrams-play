@@ -5,7 +5,7 @@ module RoundedPaths
 --    , roundedCornerPath
     ) where
 
-import Diagrams.Prelude
+import           Diagrams.Prelude hiding (arc')
 
 offsetPath :: Double -> Path R2 -> Path R2
 offsetPath r = Path . map (fromFixed . expandFixedSegments r) . fixPath
