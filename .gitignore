@@ -12,3 +12,6 @@ cabal-dev
 dist_*
 history
 TAGS
+*.png
+*.jpg
+*.mp4
