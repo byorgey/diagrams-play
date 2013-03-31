@@ -25,4 +25,6 @@ main = do
   t <- evalRandIO (randomCycle 100)
   let p  = t # pathFromTrail
       ps = iterate (shrinkPath 0.5) p # take 1000
-  animMain $ discrete (map (bg white . stroke) ps) # stretch 30
+  animMain . stretchTo 20 . movie $ zipWith (\dia dur -> setEra (mkEra 0 dur) (pure dia)) (map (bg white . stroke) ps) durations
+
+durations = iterate (\d -> 0.05 + ((d - 0.05) * 0.9)) 1
