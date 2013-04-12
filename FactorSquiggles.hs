@@ -40,9 +40,11 @@ squiggles len = (zipWith (squiggle len) colors . map fromIntegral . filter isPri
               # mconcat
               # beneath dots
               # withEnvelope (mempty :: D R2)
-              # atop (strutX (len + 1) # alignL)
+--              # atop (strutX (len + 1) # alignL)
+              # atop (strutX 180 # alignL)
   where
-    dots = replicate (ceiling len + 2) (circle 0.2 # fc white)
+--    dots = replicate (ceiling len + 2) (circle 0.2 # fc white)
+    dots = replicate 181 (circle 0.2 # fc white # lc white)
          # hcat' with { catMethod = Distrib, sep = 1 }
 
 hsvBlend t c1 c2 = uncurryRGB sRGB . hsv3 $ lerp h2 h1 t
