@@ -4,6 +4,9 @@ import           Control.Monad
 import           Control.Monad.Random
 import qualified Data.Colour                    as Colour
 import           Data.List
+import qualified Data.Map                       as M
+import           Data.Maybe                     (catMaybes)
+import qualified Data.Set                       as S
 import           Diagrams.Backend.Cairo.CmdLine
 import           Diagrams.Prelude
 
@@ -11,22 +14,17 @@ type Edge = (P2,P2)
 
 type Triangle = [P2]
 
-check :: a -> (a -> a)
-check _ = id
+delaunay :: [P2] -> [Cell]
+delaunay ps = filter (isDelaunay ps) . catMaybes . map mkCell . ksubsets 3 $ ps
 
-delaunay :: [P2] -> [Triangle]
-delaunay ps = filter isDelaunay . ksubsets 3
-            $ ps
-  where
-    isDelaunay [x,y,z] =
-      let mc = circumcircle x y z
-      in  case mc of
-            Nothing -> False
-            Just c  -> all (\p -> (p `elem` [x,y,z]) || not (p `inCircle` c)) ps
+isDelaunay :: [P2] -> Cell -> Bool
+isDelaunay ps (Cell [x,y,z] c) = all (\p -> (p `elem` [x,y,z]) || not (p `inCircle` c)) ps
 
+{-
 toEdges :: [Triangle] -> [Edge]
 toEdges = map (toEdge . head) . group . sort . concatMap (ksubsets 2)
   where toEdge [x,y] = (x,y)
+-}
 
 {-
 
@@ -66,9 +64,14 @@ toEdges = map (toEdge . head) . group . sort . concatMap (ksubsets 2)
 
 -- | A circle, represented as center + squared radius.
 data Circle = Circle P2 Double
+  deriving (Eq, Ord, Show)
 
 inCircle :: P2 -> Circle -> Bool
 inCircle p (Circle ctr rSq) = magnitudeSq (p .-. ctr) < rSq
+
+mkCell :: [P2] -> Maybe Cell
+mkCell pts@[x,y,z] = Cell pts <$> circumcircle x y z
+mkCell _ = Nothing
 
 -- | Given three points, return their common circle, or Nothing if the
 -- points are collinear (or very close).
@@ -91,6 +94,20 @@ circumcircle p1 p2 p3
 
     -- XXX can simplify/streamline the above?
 
+-- | A cell is a triangle together with its circumcircle.
+data Cell = Cell [P2] Circle
+  deriving (Eq, Ord, Show)
+
+data Triangulation = Triangulation
+  { triCells         :: [Cell]
+  , triPointPointMap :: M.Map P2 (S.Set P2)
+  , triPointCellMap  :: M.Map P2 (S.Set Cell)
+  , triEdgeCellMap   :: M.Map Edge (S.Set Cell)
+  }
+
+mkTriangulation :: [Cell] -> Triangulation
+mkTriangulation = undefined
+
 ksubsets :: Int -> [a] -> [[a]]
 ksubsets 0 _  = [[]]
 ksubsets n [] = []
@@ -98,14 +115,26 @@ ksubsets n (a:as) = map (a:) (ksubsets (n-1) as) ++ ksubsets n as
 
 pointSet :: (Applicative m, MonadRandom m) => Int -> m [P2]
 pointSet n = replicateM n pt
-  where pt = (&) <$> getRandom <*> getRandom
+--  where pt = (&) <$> getRandom <*> getRandom
+  where pt = (\sr th -> ((sr * cos th) & (sr * sin th)) # translate (1&1) # scale 0.5)
+               <$> (sqrt <$> getRandom)
+               <*> getRandomR (0,tau)
 
-drawTriangle vs = {- stroke tri # lc grey <> -} stroke tri {- # scaleAbout (avgX & avgY) 1 -} # lw 0 # fcA color
+drawTriangle (Cell vs c)
+  = {- drawCircle c <> -}
+    {- (mconcat . map dot $ vs) <> -}
+    {- stroke tri # lc grey <> -}
+    stroke tri
+      {- # scaleAbout (avgX & avgY) 1.01 -}
+      # lw 0 # fcA color
   where
     avgX = sum (map (fst . unp2) vs) / 3
     avgY = sum (map (snd . unp2) vs) / 3
     color = blend 0.5 (blue `withOpacity` avgX) (red `withOpacity` avgY)
     tri  = close $ fromVertices vs
+
+    drawCircle (Circle ctr rSq) = circle (sqrt rSq) # moveTo ctr
+    dot p = circle 0.01 # fc black # moveTo p
 
 scaleAbout p d = scale d `under` translation (negate p)
 
@@ -116,8 +145,13 @@ heron [x,y,z] = sqrt (s * (s - a) * (s - b) * (s - c))
     b = magnitude (y .-. z)
     c = magnitude (z .-. x)
 
-dia = mconcat . map drawTriangle
-    $ delaunay (evalRand (pointSet 100) (mkStdGen 1))
+dia = delaunay ({- corners ++ -} circumf 30 ++ evalRand (pointSet 100) (mkStdGen 2))
+    # map drawTriangle
+    # mconcat
+    # view origin (1&1)
+
+circumf n = iterateN n (rotateBy (1/fromIntegral n)) (1&0)
+          # map (scale 0.5 . translate (1&1))
 
 corners = map (\[x,y] -> x & y) $ replicateM 2 [0,1]
 
