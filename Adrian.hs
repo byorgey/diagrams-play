@@ -12,7 +12,11 @@ mark = named ()
 
 -- A bunch of stuff, each positioned according to its own sweet logic,
 -- some of which are marked.  Note, it's critical that we mark each
--- subdiagram *before* applying any transformations!
+-- subdiagram *after* any transformations which we want to affect how
+-- its "right edge" is determined (e.g. the scaleX on the circle
+-- below), but *before* any transformations which serve to position it
+-- in the overall diagram (e.g. the translations of the pentagon and
+-- square).
 stuff = ( triangle 3 # mark
           ===
           circle 1
