@@ -10,8 +10,9 @@ import           Diagrams.Prelude
 -- We can "mark" things just by giving them the name ()
 mark = named ()
 
--- a bunch of stuff, each positioned according to its own sweet logic,
--- some of which are marked
+-- A bunch of stuff, each positioned according to its own sweet logic,
+-- some of which are marked.  Note, it's critical that we mark each
+-- subdiagram *before* applying any transformations!
 stuff = ( triangle 3 # mark
           ===
           circle 1
