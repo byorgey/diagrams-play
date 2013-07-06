@@ -1,23 +1,43 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
+{-# LANGUAGE DataKinds #-}
 
 -- http://preshing.com/20110831/penrose-tiling-explained
 -- http://www.math.ubc.ca/~cass/courses/m308-02b/projects/schweber/penrose.html
+-- http://en.wikipedia.org/wiki/Penrose_tiling
+
+-- See also http://www.math.brown.edu/~res/MFS/handout7.pdf for some proofs
 
 import           Diagrams.Backend.Cairo.CmdLine
 import           Diagrams.Prelude
 
-data Tri
-  = Small P2 P2 P2
-  | Big   P2 P2 P2
+-- Type A triangles make up kites + darts; Type B triangles make up rhombs.
+data RobinsonType = A | B
 
-mirror (Small a b c) = Small a c b
-mirror (Big   a b c) = Big   a c b
+-- Robinson triangles.
+data Tri :: RobinsonType -> * where
+  Acute  :: P2 -> P2 -> P2 -> Tri r
+  Obtuse :: P2 -> P2 -> P2 -> Tri r
 
-drawTri :: Tri -> Diagram Cairo R2
-drawTri (Small a b c) = drawTri' yellow b a c
-drawTri (Big   a b c) = drawTri' purple b a c
+mirror :: Tri r -> Tri r
+mirror (Acute  a b c) = Acute  a c b
+mirror (Obtuse a b c) = Obtuse a c b
 
-drawTri' color x y z
+class Drawable a where
+  draw :: a -> Diagram Cairo R2
+
+instance Drawable (Tri A) where
+  draw (Acute  a b c) = drawTri purple a b c
+  draw (Obtuse a b c) = drawTri yellow a b c
+
+instance Drawable (Tri B) where
+  draw (Acute  a b c) = drawTri yellow b a c
+  draw (Obtuse a b c) = drawTri purple b a c
+
+drawTri :: Colour Double -> P2 -> P2 -> P2 -> Diagram Cairo R2
+drawTri color x y z
   =
   ( stroke (fromVertices [x,y,z])
   # fc color
@@ -29,31 +49,44 @@ drawTri' color x y z
   -- # lc color
   -- )
 
+-- Inflation of Robinson triangles to generate a P2 (kites + darts) Penrose tiling.
+inflateP2 :: Tri A -> [Tri A]
+inflateP2 (Acute a b c) =
+  let q = alerp b a gr
+      r = alerp a c gr
+  in  [Obtuse q r a, Acute b q r, Acute b c r]
+inflateP2 (Obtuse a b c) =
+  let p = alerp c b gr
+  in  [Obtuse p a b, Acute c p a]
 
-divide :: Tri -> [Tri]
-divide (Small a b c) =
+-- Inflation of Robinson triangles to generate a P3 (rhombus) Penrose tiling.
+inflateP3 :: Tri B -> [Tri B]
+inflateP3 (Acute a b c) =
   let p = alerp a b gr
-  in  [Small c p b, Big p c a]
-divide (Big a b c) =
+  in  [Acute c p b, Obtuse p c a]
+inflateP3 (Obtuse a b c) =
   let q = alerp b a gr
       r = alerp b c gr
-  in  [Big q r b, Small r q a, Big r c a]
+  in  [Obtuse q r b, Acute r q a, Obtuse r c a]
 
 gr :: Double
 gr = -((1 - sqrt 5)/2)
 
+triangles :: [Tri r]
 triangles = zipWith ($) (cycle [id, mirror])
-          $ zipWith (Small origin) d (tail (cycle d))
+          $ zipWith (Acute origin) d (tail (cycle d))
   where
     d = decagon 1 # rotateBy (-1/4)
 
-drawTris = mconcat . map drawTri
+drawTris = mconcat . map draw
 
-step = concatMap divide
+stepA = concatMap inflateP2
+stepB = concatMap inflateP3
 
-tilings = iterate step triangles
+tilingsA = iterate stepA triangles
+tilingsB = iterate stepB triangles
 
-t n = drawTris (tilings !! n)
-    # view ((-1) & (-1)) (2 & 2)
+t ts n = drawTris (ts !! n)
+       # view ((-1) & (-1)) (2 & 2)
 
-main = defaultMain (t 7)
+main = defaultMain (t tilingsA 7)
