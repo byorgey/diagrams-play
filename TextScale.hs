@@ -1,9 +1,8 @@
 {-# LANGUAGE NoMonomorphismRestriction #-}
 
-import Diagrams.Prelude
-import Diagrams.Backend.Cairo.CmdLine
+import           Diagrams.Backend.SVG.CmdLine
+import           Diagrams.Prelude
 
-t = text "F" <> square 1
-s = text "G" <> square 1
+example = text "Hello World!" # fontSize 0.2 # scaleX 2 <> rect 3 1 # lwO 1 # showOrigin
 
-main = defaultMain (t # scale 2 ||| s # scale (1/2))
+main = defaultMain example
