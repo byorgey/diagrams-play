@@ -9,15 +9,18 @@ import           Data.Maybe                     (catMaybes)
 import qualified Data.Set                       as S
 import           Diagrams.Backend.Cairo.CmdLine
 import           Diagrams.Prelude
+import           Linear.Metric
 
-type Edge = (P2,P2)
+type Pt = P2 Double
 
-type Triangle = [P2]
+type Edge = (Pt,Pt)
 
-delaunay :: [P2] -> [Cell]
+type Triangle = [Pt]
+
+delaunay :: [Pt] -> [Cell]
 delaunay ps = filter (isDelaunay ps) . catMaybes . map mkCell . ksubsets 3 $ ps
 
-isDelaunay :: [P2] -> Cell -> Bool
+isDelaunay :: [Pt] -> Cell -> Bool
 isDelaunay ps (Cell [x,y,z] c) = all (\p -> (p `elem` [x,y,z]) || not (p `inCircle` c)) ps
 
 {-
@@ -63,19 +66,19 @@ toEdges = map (toEdge . head) . group . sort . concatMap (ksubsets 2)
 -}
 
 -- | A circle, represented as center + squared radius.
-data Circle = Circle P2 Double
+data Circle = Circle Pt Double
   deriving (Eq, Ord, Show)
 
-inCircle :: P2 -> Circle -> Bool
-inCircle p (Circle ctr rSq) = magnitudeSq (p .-. ctr) < rSq
+inCircle :: Pt -> Circle -> Bool
+inCircle p (Circle ctr rSq) = quadrance (p .-. ctr) < rSq
 
-mkCell :: [P2] -> Maybe Cell
+mkCell :: [Pt] -> Maybe Cell
 mkCell pts@[x,y,z] = Cell pts <$> circumcircle x y z
 mkCell _ = Nothing
 
 -- | Given three points, return their common circle, or Nothing if the
 -- points are collinear (or very close).
-circumcircle :: P2 -> P2 -> P2 -> Maybe Circle
+circumcircle :: Pt -> Pt -> Pt -> Maybe Circle
 circumcircle p1 p2 p3
   | abs det < 0.00001 = Nothing
   | otherwise         = Just $ Circle ctr rSq
@@ -90,18 +93,18 @@ circumcircle p1 p2 p3
     t     = (d*x - b*y) / det
     s     = (-c*x + a*y) / det
     ctr   = alerp p1 p2 0.5 .+^ (perp v1 # scale t)
-    rSq   = magnitudeSq (p1 .-. ctr)
+    rSq   = quadrance (p1 .-. ctr)
 
     -- XXX can simplify/streamline the above?
 
 -- | A cell is a triangle together with its circumcircle.
-data Cell = Cell [P2] Circle
+data Cell = Cell [Pt] Circle
   deriving (Eq, Ord, Show)
 
 data Triangulation = Triangulation
   { triCells         :: [Cell]
-  , triPointPointMap :: M.Map P2 (S.Set P2)
-  , triPointCellMap  :: M.Map P2 (S.Set Cell)
+  , triPointPointMap :: M.Map Pt (S.Set Pt)
+  , triPointCellMap  :: M.Map Pt (S.Set Cell)
   , triEdgeCellMap   :: M.Map Edge (S.Set Cell)
   }
 
@@ -113,7 +116,7 @@ ksubsets 0 _  = [[]]
 ksubsets n [] = []
 ksubsets n (a:as) = map (a:) (ksubsets (n-1) as) ++ ksubsets n as
 
-pointSet :: (Applicative m, MonadRandom m) => Int -> m [P2]
+pointSet :: (Applicative m, MonadRandom m) => Int -> m [Pt]
 pointSet n = replicateM n pt
 --  where pt = (&) <$> getRandom <*> getRandom
   where pt = (\sr th -> ((sr * cos th) & (sr * sin th)) # translate (1&1) # scale 0.5)
@@ -141,9 +144,9 @@ scaleAbout p d = scale d `under` translation (negate p)
 heron [x,y,z] = sqrt (s * (s - a) * (s - b) * (s - c))
   where
     s = (a+b+c)/2
-    a = magnitude (x .-. y)
-    b = magnitude (y .-. z)
-    c = magnitude (z .-. x)
+    a = norm (x .-. y)
+    b = norm (y .-. z)
+    c = norm (z .-. x)
 
 dia = delaunay ({- corners ++ -} circumf 30 ++ evalRand (pointSet 100) (mkStdGen 2))
     # map drawTriangle

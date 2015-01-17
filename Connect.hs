@@ -3,12 +3,13 @@
 import           Data.List
 import           Data.Ord
 import           Diagrams.Backend.Cairo.CmdLine
+import           Diagrams.BoundingBox
 import           Diagrams.Prelude
 
 box1 = square 1 # named "box1"
 box2 = rect 3 2 # named "box2"
 
-boxes = box1 <> box2 # translate (4 & 3)
+boxes = box1 <> box2 # translate (4 ^& 3)
 
 magnify = boxes # (withNames ["box1", "box2"] $ \bs ->
   let [cs1, cs2] = map (getAllCorners . boundingBox . getSub) bs
