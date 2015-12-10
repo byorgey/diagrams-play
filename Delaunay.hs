@@ -88,11 +88,11 @@ circumcircle p1 p2 p3
     perp  = rotateBy (1/4)
     (a,c) = v1 # perp # unr2
     (b,d) = v2 # perp # unr2
-    (x,y) = unr2 (alerp p2 p3 0.5 .-. alerp p1 p2 0.5)
+    (x,y) = unr2 (lerp 0.5 p2 p3 .-. lerp 0.5 p1 p2)
     det   = a*d - b*c
     t     = (d*x - b*y) / det
     s     = (-c*x + a*y) / det
-    ctr   = alerp p1 p2 0.5 .+^ (perp v1 # scale t)
+    ctr   = lerp 0.5 p1 p2 .+^ (perp v1 # scale t)
     rSq   = quadrance (p1 .-. ctr)
 
     -- XXX can simplify/streamline the above?
@@ -127,14 +127,14 @@ drawTriangle (Cell vs c)
   = {- drawCircle c <> -}
     {- (mconcat . map dot $ vs) <> -}
     {- stroke tri # lc grey <> -}
-    stroke tri
+    strokeLocTrail tri
       {- # scaleAbout (avgX & avgY) 1.01 -}
       # lw 0 # fcA color
   where
     avgX = sum (map (fst . unp2) vs) / 3
     avgY = sum (map (snd . unp2) vs) / 3
     color = blend 0.5 (blue `withOpacity` avgX) (red `withOpacity` avgY)
-    tri  = close $ fromVertices vs
+    tri  = mapLoc closeTrail $ fromVertices vs
 
     drawCircle (Circle ctr rSq) = circle (sqrt rSq) # moveTo ctr
     dot p = circle 0.01 # fc black # moveTo p
