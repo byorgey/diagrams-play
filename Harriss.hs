@@ -38,6 +38,8 @@ import           Diagrams.Backend.Rasterific.CmdLine
 import           Diagrams.Prelude
 import           Diagrams.Solve.Polynomial
 
+import           Data.List.Split                     (chunksOf)
+
 plastic :: Double
 [plastic] = cubForm 1 0 (-1) (-1)
 
@@ -62,15 +64,34 @@ t1 = translationX (1/plastic) <> scaling (1/plastic) <> rotation (1/4 @@ turn)
 t2 :: T2 Double
 t2 = translation ((1/plastic) ^& (plastic - 1/plastic)) <> scaling (1 - 1/plastic^2)
 
-theUnit :: Diagram B
-theUnit = stroke theArc <> stroke plasticRect
-
+-- Fixed recursion depth
 harriss :: Int -> Diagram B
-harriss n
-  | n <= 0    = mempty
-  | otherwise = stroke theArc <> transform t1 (harriss (n-1)) <> transform t2 (harriss (n-1))
+harriss 0 = mempty
+harriss n = mconcat
+  [ stroke theArc
+  , transform t1 $ harriss (n-1)
+  , transform t2 $ harriss (n-1)
+  ]
+
+-- Pick recursion depth based on desired pixel accuracy
+harrissPx :: Int -> Diagram B
+harrissPx px = go mempty
+  where
+    go :: T2 Double -> Diagram B
+    go t
+      | avgScale t < 1/(fromIntegral px) = mempty
+      | otherwise                        =
+        mconcat
+        [ transform t $ stroke theArc
+        , go (t1 <> t)
+        , go (t2 <> t)
+        ]
 
 dia :: Diagram B
-dia = harriss 10
+dia = (map (beneath (phantom (stroke plasticRect :: Diagram B)) . harriss) [2..11])
+  # chunksOf 2
+  # map (hsep 0.2)
+  # vsep 0.2
+  # lw thin
 
 main = mainWith (dia # frame 0.1)
